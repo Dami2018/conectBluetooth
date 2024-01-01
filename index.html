@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Conexión Bluetooth</title>
+</head>
+<body>
+    <button id="connect">Conectar a Bluetooth</button>
+    <input type="text" id="dataToSend" placeholder="Escribe algo para enviar"/>
+    <button id="send" disabled>Enviar Datos</button>
+
+    <script>
+        let bluetoothDevice;
+        let bluetoothCharacteristic;
+
+        document.querySelector('#connect').addEventListener('click', () => {
+            if (!navigator.bluetooth) {
+                console.log('Web Bluetooth no es soportado en este navegador.');
+                return;
+            }
+
+            navigator.bluetooth.requestDevice({
+                // Aquí debes especificar los filtros apropiados para tu dispositivo
+                acceptAllDevices: true,
+                optionalServices: ['battery_service'] // Reemplaza con tu servicio específico
+            })
+            .then(device => {
+                bluetoothDevice = device;
+                console.log('Conectando a', device.name);
+                return device.gatt.connect();
+            })
+            .then(server => {
+                // Reemplaza 'battery_service' con tu servicio específico
+                return server.getPrimaryService('battery_service');
+            })
+            .then(service => {
+                // Reemplaza 'battery_level' con tu característica específica
+                return service.getCharacteristic('battery_level');
+            })
+            .then(characteristic => {
+                bluetoothCharacteristic = characteristic;
+                document.querySelector('#send').disabled = false;
+                console.log('Conectado y listo para enviar datos.');
+            })
+            .catch(error => {
+                console.log('Error en la conexión Bluetooth:', error);
+            });
+        });
+
+        document.querySelector('#send').addEventListener('click', () => {
+            const dataToSend = document.querySelector('#dataToSend').value;
+            const encoder = new TextEncoder();
+            const encoded = encoder.encode(dataToSend);
+
+            if (bluetoothCharacteristic && encoded) {
+                bluetoothCharacteristic.writeValue(encoded)
+                .then(() => {
+                    console.log('Datos enviados:', dataToSend);
+                })
+                .catch(error => {
+                    console.log('Error al enviar datos:', error);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
